@@ -6,6 +6,7 @@ import usersRoute from './routes/users.js'
 import roomsRoute from './routes/rooms.js'
 import hotelsRoute from './routes/hotels.js'
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 
 const app = express();
 
@@ -26,12 +27,13 @@ mongoose.connection.on("disconnected", ()=> {
     console.log("mongoDB disconnected!")
 })
 
-// mongoose.connection.on("connected", ()=> {
-//     console.log("mongoDB connected!")
-// })
+mongoose.connection.on("connected", ()=> {
+    console.log("mongoDB connected!")
+})
 // DB Connection ends here
 
 // middleware
+app.use(cors())
 app.use(cookieParser())
 app.use(express.json())
 
@@ -56,5 +58,5 @@ app.use((err, req, res, next) => {
 // Server listen and DB function
 app.listen(8000, ()=> {
     connect();
-    console.log("Connected to Backend")
+    console.log("Connected to Backend 8000")
 })
