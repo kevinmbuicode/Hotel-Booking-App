@@ -1,33 +1,44 @@
 import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import useFetch from "../../hooks/useFetch";
 import { SearchContext } from "../../context/SearchContext";
 import "./reserve.css";
+import axios from "axios";
 
 const Reserve = ({ setOpen, hotelId }) => {
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const {dates} = useContext(SearchContext);
+  const { dates } = useContext(SearchContext);
   const { data, loading, error } = useFetch(
     `http://localhost:8000/api/hotels/room/${hotelId}`
   );
+  const navigate = useNavigate();
 
   // Get dates in selected range
   const getDatesInRange = (startDate, endDate) => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
     const date = new Date(start.getTime());
     let dates = [];
-    while(date <= end){
-        dates.push(new Date(date))
-        date.setDate(date.getDate()+1)
+    while (date <= end) {
+      dates.push(new Date(date));
+      date.setDate(date.getDate() + 1);
     }
 
     return dates;
   };
 
-  console.log(getDatesInRange(dates[0].startDate, dates[0].endDate))
+  const allDates = getDatesInRange(dates[0].startDate, dates[0].endDate);
+
+  const isAvailable = (roomNumber) => {
+    const isFound = roomNumber.unavailableDates.some((date) =>
+      allDates.includes(new Date(date).getTime())
+    );
+
+    return !isFound;
+  };
 
   const handleSelect = (e) => {
     const checked = e.target.checked;
@@ -39,9 +50,23 @@ const Reserve = ({ setOpen, hotelId }) => {
     );
   };
 
-  const handleClick =()=> {
-
-  }
+  const handleClick = async () => {
+    try {
+      await Promise.all(
+        selectedRooms.map((roomId) => {
+          const res = axios.put(
+            `http://localhost:8000/api/rooms/availability/${roomId}`,
+            { dates: allDates }
+          );
+          return res.data;
+        })
+      );
+      setOpen(false);
+      navigate("/");
+    } catch (err) {
+      return err;
+    }
+  };
 
   return (
     <div className="reserve">
@@ -62,19 +87,24 @@ const Reserve = ({ setOpen, hotelId }) => {
               </div>
               <div className="rPrice">{item.price}</div>
             </div>
-            {item.roomNumbers.map((roomNumber) => (
-              <div className="room" key={roomNumber._id}>
-                <label>{roomNumber.number}</label>
-                <input
-                  type="checkbox"
-                  value={roomNumber._id}
-                  onChange={handleSelect}
-                />
-              </div>
-            ))}
+            <div className="rSelectedRooms">
+              {item.roomNumbers.map((roomNumber) => (
+                <div className="room" key={roomNumber._id}>
+                  <label>{roomNumber.number}</label>
+                  <input
+                    type="checkbox"
+                    value={roomNumber._id}
+                    onChange={handleSelect}
+                    disabled={!isAvailable(roomNumber)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         ))}
-        <button onClick={handleClick} className="rButton">Reserve Now!</button>
+        <button onClick={handleClick} className="rButton">
+          Reserve Now!
+        </button>
       </div>
     </div>
   );
